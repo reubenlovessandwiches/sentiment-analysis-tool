@@ -1,0 +1,414 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary-border: var(--sidebar-primary-border);
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent-border: var(--sidebar-accent-border);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* LIGHT MODE - Though defaults to dark, we provide light as a cool metallic variant */
+:root {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+
+  --opaque-button-border-intensity: -8;
+
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+
+  --background: 210 40% 98%;
+  --foreground: 222.2 84% 4.9%;
+
+  --border: 214.3 31.8% 91.4%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --card-border: 214.3 31.8% 91.4%;
+
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 222.2 84% 4.9%;
+  --sidebar-border: 214.3 31.8% 91.4%;
+  --sidebar-primary: 222.2 47.4% 11.2%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 210 40% 96.1%;
+  --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+  --sidebar-ring: 215 20.2% 65.1%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --popover-border: 214.3 31.8% 91.4%;
+
+  /* Teal */
+  --primary: 173 80% 40%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  /* Amber/Orange */
+  --accent: 38 92% 50%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  
+  --chart-1: 173 80% 40%;
+  --chart-2: 38 92% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: Georgia, serif;
+  --app-font-mono: 'JetBrains Mono', Menlo, monospace;
+  --radius: .5rem; 
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+
+  --opaque-button-border-intensity: 9;
+
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+
+  /* Deep ominous blue/black */
+  --background: 220 30% 6%;
+  --foreground: 210 40% 98%;
+
+  --border: 215 28% 17%;
+  
+  /* Slightly elevated blue/black with glassmorphism intent */
+  --card: 220 28% 9%;
+  --card-foreground: 210 40% 98%;
+  --card-border: 215 28% 17%;
+
+  --sidebar: 220 30% 6%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 215 28% 17%;
+  --sidebar-primary: 173 80% 40%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 215 28% 17%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-ring: 215 20.2% 65.1%;
+
+  --popover: 220 28% 9%;
+  --popover-foreground: 210 40% 98%;
+  --popover-border: 215 28% 17%;
+
+  /* Teal */
+  --primary: 173 80% 40%;
+  --primary-foreground: 220 30% 6%;
+
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 215 28% 17%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  /* Sharp Amber */
+  --accent: 38 92% 50%;
+  --accent-foreground: 220 30% 6%;
+
+  --destructive: 0 84% 62%;
+  --destructive-foreground: 210 40% 98%;
+
+  --input: 215 28% 17%;
+  --ring: 212.7 26.8% 83.9%;
+  
+  --chart-1: 173 80% 40%;
+  --chart-2: 38 92% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    background-image: radial-gradient(circle at center, rgba(13, 148, 136, 0.03) 0%, transparent 100%);
+    background-attachment: fixed;
+  }
+}
+
+/* Glassmorphism helpers */
+.glass {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .glass {
+  background: rgba(10, 15, 25, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Print stylesheet ─────────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything marked no-print (sidebar, nav, buttons, etc.) */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Light-theme base */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    height: auto !important;
+    overflow: visible !important;
+    font-size: 11pt !important;
+    line-height: 1.55 !important;
+  }
+
+  body {
+    background-image: none !important;
+  }
+
+  /* Unclip scroll containers so the full report flows across pages */
+  body * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Outer flex shell → block so it doesn't constrain width */
+  body > div {
+    display: block !important;
+    height: auto !important;
+  }
+
+  main {
+    width: 100% !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  /* ── Report container ── */
+  /* Padding here provides the page margin; @page margin is 0 so the browser
+     does not draw its header/footer (document title + site URL). */
+  .print-report {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1.4cm 1.6cm !important;
+  }
+
+  /* ── Cards ── */
+  .print-report .glass {
+    background: #ffffff !important;
+    border: 0.75pt solid #d0d0d0 !important;
+    border-radius: 4pt !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 14pt !important;
+  }
+
+  /* ── Typography ── */
+  .print-report * {
+    color: #111111 !important;
+  }
+
+  .print-report .text-muted-foreground,
+  .print-report [class*="muted"] {
+    color: #555555 !important;
+  }
+
+  .print-report .text-primary,
+  .print-report [class*="text-primary"] {
+    color: #0d7a5f !important;
+  }
+
+  .print-report .text-destructive,
+  .print-report [class*="text-destructive"] {
+    color: #b91c1c !important;
+  }
+
+  .print-report h1,
+  .print-report h2,
+  .print-report h3 {
+    color: #111111 !important;
+  }
+
+  .print-report a {
+    color: #0d7a5f !important;
+    text-decoration: underline !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Append each content link's full destination URL, wrapping long URLs so
+     they never overflow the page. .no-print links are excluded. */
+  .print-report a[href]:not(.no-print)::after {
+    content: " (" attr(href) ")";
+    color: #555555 !important;
+    font-weight: normal !important;
+    text-decoration: none !important;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
+  /* Unclip truncated comment/post bodies so they print in full. */
+  .print-report [class*="line-clamp"] {
+    -webkit-line-clamp: unset !important;
+    display: block !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* ── Badges ── */
+  .print-report span[class*="badge"],
+  .print-report div[class*="badge"] {
+    background: #f3f4f6 !important;
+    border-color: #d0d0d0 !important;
+    color: #333333 !important;
+  }
+
+  /* ── Separators ── */
+  .print-report [data-slot="separator"],
+  .print-report hr {
+    background: #d0d0d0 !important;
+    border-color: #d0d0d0 !important;
+  }
+
+  /* ── Representative comment quote boxes ── */
+  .print-report .print-quote {
+    background: #f8fafc !important;
+    border-top: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-left: 3pt solid #0d7a5f !important;
+    border-radius: 0 !important;
+    padding-left: 10pt !important;
+  }
+
+  /* ── Flagged comment boxes ── */
+  .print-report .print-flagged {
+    background: #fff8f8 !important;
+    border-top: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-left: 3pt solid #b91c1c !important;
+    border-radius: 0 !important;
+    padding-left: 10pt !important;
+  }
+
+  /* ── Report header card: left accent bar ── */
+  .print-report .border-primary\/20 {
+    border-left: 4pt solid #0d7a5f !important;
+    border-top: 0.75pt solid #d0d0d0 !important;
+    border-right: 0.75pt solid #d0d0d0 !important;
+    border-bottom: 0.75pt solid #d0d0d0 !important;
+  }
+
+  /* ── Threads Analysed rows: wrap long titles, top-align stats ── */
+  .print-thread-row {
+    align-items: flex-start !important;
+  }
+  .print-thread-title {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    display: block !important;
+  }
+  .print-thread-title span {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  .print-thread-stats {
+    padding-top: 1pt;
+  }
+
+  /* ── Reveal print-only elements ── */
+  .print-only {
+    display: block !important;
+  }
+
+  /* ── Page setup ── */
+  /* margin: 0 suppresses the browser's auto print header/footer (page title
+     "App" + the site URL). Page margins come from .print-report padding. */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
