@@ -85,11 +85,6 @@ generic default taxonomy ships with the repo. Requires `OPENAI_API_KEY` /
 - **Admin Panel** — manage subreddits, launch crawls, view job queue (live unclassified count, dimmed finished-job snapshots, clear-finished control)
 - **User Management** (main admin only) — DB-backed multi-account auth (1 admin + members). Add/delete accounts; view a paginated (5/page) audit log of all login attempts (success/fail, IP, UTC timestamp)
 
-## User preferences
-
-- Do not narrate work or thought process; only report when the task is done.
-- To conserve credits: do not show reasoning, thought processes, or step-by-step explanations unless explicitly requested. Only return: final answer/result, brief status (Done / In Progress / Blocked), a short summary of what was done, and any issues or required input. Keep responses concise and outcome-focused.
-
 ## Gotchas
 
 - Always run `pnpm run typecheck:libs` before `pnpm --filter @workspace/api-server run typecheck` — the api-server depends on composite libs
