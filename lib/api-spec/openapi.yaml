@@ -1,0 +1,3577 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: App - Reddit Community Intelligence Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Dashboard and stats
+  - name: subreddits
+    description: Subreddit management
+  - name: users
+    description: Reddit user profiles and analyses
+  - name: archetypes
+    description: Archetype classification explorer
+  - name: jobs
+    description: Background job management
+  - name: search
+    description: Search and filter
+  - name: finance
+    description: Cost tracking and finance reporting
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get the currently authenticated user
+      responses:
+        "200":
+          description: Authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+
+  /admin/accounts:
+    get:
+      operationId: listAccounts
+      tags: [admin]
+      summary: List all application accounts (admin only)
+      responses:
+        "200":
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAccountsResponse"
+        "403":
+          description: Admin access required
+    post:
+      operationId: createAccount
+      tags: [admin]
+      summary: Create a new application account (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountBody"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [username, role]
+                properties:
+                  username:
+                    type: string
+                  role:
+                    type: string
+        "400":
+          description: Invalid input
+        "403":
+          description: Admin access required
+        "409":
+          description: Username already exists
+
+  /admin/accounts/{username}:
+    patch:
+      operationId: updateAccount
+      tags: [admin]
+      summary: Update an account's role and/or password (admin only)
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountBody"
+      responses:
+        "200":
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppAccount"
+        "400":
+          description: Invalid input or cannot demote the last admin
+        "403":
+          description: Admin access required
+        "404":
+          description: Account not found
+    delete:
+      operationId: deleteAccount
+      tags: [admin]
+      summary: Delete an application account (admin only)
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        "400":
+          description: Cannot delete (self or last admin)
+        "403":
+          description: Admin access required
+        "404":
+          description: Account not found
+
+  /admin/login-attempts:
+    get:
+      operationId: listLoginAttempts
+      tags: [admin]
+      summary: Paginated list of login attempts (admin only)
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Paginated login attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginAttemptsResponse"
+        "403":
+          description: Admin access required
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard stats
+      parameters:
+        - name: subredditId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/theme-details:
+    get:
+      operationId: getDashboardThemeDetails
+      tags: [dashboard]
+      summary: Get elaborated descriptions for a given theme label
+      parameters:
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme descriptions from individual user analyses
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, items]
+                properties:
+                  label:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ThemeDetailItem"
+
+  /facebook/dashboard/theme-details:
+    get:
+      operationId: getFacebookDashboardThemeDetails
+      tags: [facebook]
+      summary: Get elaborated descriptions for a given Facebook theme label
+      parameters:
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme descriptions from individual Facebook profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, items]
+                properties:
+                  label:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FacebookThemeDetailItem"
+
+  /subreddits:
+    get:
+      operationId: listSubreddits
+      tags: [subreddits]
+      summary: List all subreddits
+      responses:
+        "200":
+          description: List of subreddits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subreddit"
+    post:
+      operationId: createSubreddit
+      tags: [subreddits]
+      summary: Add a new subreddit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubredditInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subreddit"
+        "400":
+          description: Bad request
+
+  /subreddits/{id}:
+    patch:
+      operationId: updateSubreddit
+      tags: [subreddits]
+      summary: Update subreddit (e.g. activate/deactivate)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubredditUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subreddit"
+        "404":
+          description: Not found
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users with optional filters
+      parameters:
+        - name: subredditId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+
+  /users/{username}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user profile with analyses and archetype scores
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: User not found
+
+  /users/{username}/analyze:
+    post:
+      operationId: analyzeUser
+      tags: [users]
+      summary: Trigger AI analysis for a user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Analysis queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: User not found
+
+  /users/{username}/reanalyze:
+    post:
+      operationId: reanalyzeUser
+      tags: [users]
+      summary: Re-run AI analysis for a user using already-stored data (no crawl)
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Re-analysis queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: User not found
+
+  /users/{username}/trends:
+    get:
+      operationId: getUserTrends
+      tags: [users]
+      summary: Get archetype trend data over time for a user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Trend data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrendPoint"
+        "404":
+          description: User not found
+
+  /users/{username}/notes:
+    put:
+      operationId: updateUserNotes
+      tags: [users]
+      summary: Save analyst notes for a user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notes]
+              properties:
+                notes:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Notes saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        "404":
+          description: User not found
+
+  /compare:
+    get:
+      operationId: compareUsers
+      tags: [users]
+      summary: Compare two users by archetype scores
+      parameters:
+        - name: u1
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: u2
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comparison result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserComparison"
+        "404":
+          description: One or both users not found
+
+  /archetypes:
+    get:
+      operationId: listArchetypes
+      tags: [archetypes]
+      summary: List all archetypes with stats
+      parameters:
+        - name: subredditId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Archetype stats list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchetypeStat"
+
+  /archetypes/{key}/users:
+    get:
+      operationId: getArchetypeUsers
+      tags: [archetypes]
+      summary: Get top users for a specific archetype
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Users with archetype scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserWithScore"
+
+  /search:
+    get:
+      operationId: searchUsers
+      tags: [search]
+      summary: Search users by username or archetype filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: minConfidence
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: subredditId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserWithScore"
+
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List recent jobs (paginated)
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Paginated job list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListJobsResponse"
+
+  /jobs/crawl:
+    post:
+      operationId: startCrawl
+      tags: [jobs]
+      summary: Start a subreddit crawl job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrawlInput"
+      responses:
+        "202":
+          description: Crawl job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "400":
+          description: Bad request
+
+  /jobs/classify:
+    post:
+      operationId: resumeClassification
+      tags: [jobs]
+      summary: Resume classification of all unanalyzed users
+      responses:
+        "202":
+          description: Classification started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+        "200":
+          description: Nothing to classify, or classification already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+
+  /settings/apify:
+    get:
+      operationId: getApifySettings
+      tags: [settings]
+      summary: Get Apify integration settings
+      responses:
+        "200":
+          description: Apify settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApifySettings"
+    put:
+      operationId: updateApifySettings
+      tags: [settings]
+      summary: Update Apify integration settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApifySettingsInput"
+      responses:
+        "200":
+          description: Updated Apify settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApifySettings"
+
+  /settings/apify/test:
+    post:
+      operationId: testApifyConnection
+      tags: [settings]
+      summary: Test Apify API token by calling /v2/users/me
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApifyTestResult"
+
+  /jobs/{id}:
+    delete:
+      operationId: cancelJob
+      tags: [jobs]
+      summary: Cancel a pending job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
+        "404":
+          description: Job not found
+
+  /topic-analyses:
+    get:
+      operationId: listTopicAnalyses
+      tags: [topic-analyses]
+      summary: List past topic sentiment analyses
+      responses:
+        "200":
+          description: Topic analysis list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopicAnalysisSummary"
+    post:
+      operationId: createTopicAnalysis
+      tags: [topic-analyses]
+      summary: Start a new topic sentiment analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TopicAnalysisInput"
+      responses:
+        "202":
+          description: Topic analysis started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicAnalysisSummary"
+        "400":
+          description: Bad request
+
+  /topic-analyses/{id}:
+    get:
+      operationId: getTopicAnalysis
+      tags: [topic-analyses]
+      summary: Get a topic sentiment analysis with its full report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Topic analysis detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicAnalysisDetail"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteTopicAnalysis
+      tags: [topic-analyses]
+      summary: Delete a topic sentiment analysis and its per-post records
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /topic-analyses/{id}/reanalyze:
+    post:
+      operationId: reanalyzeTopicAnalysis
+      tags: [topic-analyses]
+      summary: Re-run AI grouping on a run's stored comments without re-crawling
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReanalyzeTopicRequest"
+      responses:
+        "202":
+          description: Re-analysis started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicAnalysisSummary"
+        "400":
+          description: No stored comments to resume from
+        "404":
+          description: Not found
+        "409":
+          description: Already in progress
+
+  /topic-analyses/{id}/crawl-missing:
+    post:
+      operationId: crawlMissingTopicAnalysis
+      tags: [topic-analyses]
+      summary: Crawl only the input URLs that were skipped, then merge and re-group
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Crawl of skipped links started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicAnalysisSummary"
+        "400":
+          description: No skipped links to crawl
+        "404":
+          description: Not found
+        "409":
+          description: Already in progress
+
+  /topic-analyses/{id}/ingest-run:
+    post:
+      operationId: ingestRunTopicAnalysis
+      tags: [topic-analyses]
+      summary: Re-ingest a single input URL from an existing (already-paid) Apify run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRunInput"
+      responses:
+        "202":
+          description: Ingest of the existing run started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicAnalysisSummary"
+        "400":
+          description: Invalid request, URL not in this analysis, URL already crawled, missing token, or invalid run
+        "404":
+          description: Not found
+        "409":
+          description: Already in progress
+
+  /facebook/dashboard:
+    get:
+      operationId: getFacebookDashboard
+      tags: [facebook]
+      summary: Get Facebook dashboard stats
+      responses:
+        "200":
+          description: Facebook dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacebookDashboardStats"
+
+  /facebook/users:
+    get:
+      operationId: listFacebookUsers
+      tags: [facebook]
+      summary: List Facebook users with optional filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of Facebook users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacebookUserListResponse"
+
+  /facebook/archetypes:
+    get:
+      operationId: listFacebookArchetypes
+      tags: [facebook]
+      summary: List all archetypes with Facebook population stats
+      responses:
+        "200":
+          description: Archetype stats list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchetypeStat"
+
+  /facebook/archetypes/{key}/users:
+    get:
+      operationId: getFacebookArchetypeUsers
+      tags: [facebook]
+      summary: Get top Facebook users for a specific archetype
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Facebook users with archetype scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FacebookUserWithScore"
+
+  /facebook/search:
+    get:
+      operationId: searchFacebookUsers
+      tags: [facebook]
+      summary: Search Facebook users by name or archetype filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FacebookUserWithScore"
+
+  /facebook/users/{profileId}:
+    get:
+      operationId: getFacebookUser
+      tags: [facebook]
+      summary: Get a single Facebook user profile with analysis
+      parameters:
+        - name: profileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Facebook user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacebookUserProfile"
+        "404":
+          description: User not found
+
+  /facebook/classify:
+    post:
+      operationId: resumeFacebookClassification
+      tags: [facebook]
+      summary: Classify all Facebook users that have ingested content but no current analysis
+      responses:
+        "202":
+          description: Classification started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+        "200":
+          description: Nothing to classify, or classification already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+
+  /instagram/dashboard/theme-details:
+    get:
+      operationId: getInstagramDashboardThemeDetails
+      tags: [instagram]
+      summary: Get elaborated descriptions for a given Instagram theme label
+      parameters:
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme descriptions from individual Instagram profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, items]
+                properties:
+                  label:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/InstagramThemeDetailItem"
+
+  /instagram/dashboard:
+    get:
+      operationId: getInstagramDashboard
+      tags: [instagram]
+      summary: Get Instagram dashboard stats
+      responses:
+        "200":
+          description: Instagram dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstagramDashboardStats"
+
+  /instagram/users:
+    get:
+      operationId: listInstagramUsers
+      tags: [instagram]
+      summary: List Instagram users with optional filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of Instagram users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstagramUserListResponse"
+
+  /instagram/archetypes:
+    get:
+      operationId: listInstagramArchetypes
+      tags: [instagram]
+      summary: List all archetypes with Instagram population stats
+      responses:
+        "200":
+          description: Archetype stats list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchetypeStat"
+
+  /instagram/archetypes/{key}/users:
+    get:
+      operationId: getInstagramArchetypeUsers
+      tags: [instagram]
+      summary: Get top Instagram users for a specific archetype
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Instagram users with archetype scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstagramUserWithScore"
+
+  /instagram/search:
+    get:
+      operationId: searchInstagramUsers
+      tags: [instagram]
+      summary: Search Instagram users by name or archetype filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstagramUserWithScore"
+
+  /instagram/users/{username}:
+    get:
+      operationId: getInstagramUser
+      tags: [instagram]
+      summary: Get a single Instagram user profile with analysis
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Instagram user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstagramUserProfile"
+        "404":
+          description: User not found
+
+  /instagram/classify:
+    post:
+      operationId: resumeInstagramClassification
+      tags: [instagram]
+      summary: Classify all Instagram users that have ingested content but no current analysis
+      responses:
+        "202":
+          description: Classification started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+        "200":
+          description: Nothing to classify, or classification already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+
+  /twitter/dashboard/theme-details:
+    get:
+      operationId: getTwitterDashboardThemeDetails
+      tags: [twitter]
+      summary: Get elaborated descriptions for a given Twitter theme label
+      parameters:
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme descriptions from individual Twitter profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, items]
+                properties:
+                  label:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TwitterThemeDetailItem"
+
+  /twitter/dashboard:
+    get:
+      operationId: getTwitterDashboard
+      tags: [twitter]
+      summary: Get Twitter dashboard stats
+      responses:
+        "200":
+          description: Twitter dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwitterDashboardStats"
+
+  /twitter/users:
+    get:
+      operationId: listTwitterUsers
+      tags: [twitter]
+      summary: List Twitter users with optional filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of Twitter users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwitterUserListResponse"
+
+  /twitter/archetypes:
+    get:
+      operationId: listTwitterArchetypes
+      tags: [twitter]
+      summary: List all archetypes with Twitter population stats
+      responses:
+        "200":
+          description: Archetype stats list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchetypeStat"
+
+  /twitter/archetypes/{key}/users:
+    get:
+      operationId: getTwitterArchetypeUsers
+      tags: [twitter]
+      summary: Get top Twitter users for a specific archetype
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Twitter users with archetype scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TwitterUserWithScore"
+
+  /twitter/search:
+    get:
+      operationId: searchTwitterUsers
+      tags: [twitter]
+      summary: Search Twitter users by name or archetype filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TwitterUserWithScore"
+
+  /twitter/users/{username}:
+    get:
+      operationId: getTwitterUser
+      tags: [twitter]
+      summary: Get a single Twitter user profile with analysis
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Twitter user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwitterUserProfile"
+        "404":
+          description: User not found
+
+  /twitter/classify:
+    post:
+      operationId: resumeTwitterClassification
+      tags: [twitter]
+      summary: Classify all Twitter users that have ingested content but no current analysis
+      responses:
+        "202":
+          description: Classification started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+        "200":
+          description: Nothing to classify, or classification already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+
+  /youtube/dashboard/theme-details:
+    get:
+      operationId: getYoutubeDashboardThemeDetails
+      tags: [youtube]
+      summary: Get elaborated descriptions for a given Youtube theme label
+      parameters:
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme descriptions from individual Youtube profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, items]
+                properties:
+                  label:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/YoutubeThemeDetailItem"
+
+  /youtube/dashboard:
+    get:
+      operationId: getYoutubeDashboard
+      tags: [youtube]
+      summary: Get Youtube dashboard stats
+      responses:
+        "200":
+          description: Youtube dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YoutubeDashboardStats"
+
+  /youtube/users:
+    get:
+      operationId: listYoutubeUsers
+      tags: [youtube]
+      summary: List Youtube users with optional filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of Youtube users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YoutubeUserListResponse"
+
+  /youtube/archetypes:
+    get:
+      operationId: listYoutubeArchetypes
+      tags: [youtube]
+      summary: List all archetypes with Youtube population stats
+      responses:
+        "200":
+          description: Archetype stats list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchetypeStat"
+
+  /youtube/archetypes/{key}/users:
+    get:
+      operationId: getYoutubeArchetypeUsers
+      tags: [youtube]
+      summary: Get top Youtube users for a specific archetype
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Youtube users with archetype scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/YoutubeUserWithScore"
+
+  /youtube/search:
+    get:
+      operationId: searchYoutubeUsers
+      tags: [youtube]
+      summary: Search Youtube users by name or archetype filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/YoutubeUserWithScore"
+
+  /youtube/users/{username}:
+    get:
+      operationId: getYoutubeUser
+      tags: [youtube]
+      summary: Get a single Youtube user profile with analysis
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Youtube user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YoutubeUserProfile"
+        "404":
+          description: User not found
+
+  /youtube/classify:
+    post:
+      operationId: resumeYoutubeClassification
+      tags: [youtube]
+      summary: Classify all Youtube users that have ingested content but no current analysis
+      responses:
+        "202":
+          description: Classification started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+        "200":
+          description: Nothing to classify, or classification already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+
+
+  /tiktok/dashboard/theme-details:
+    get:
+      operationId: getTikTokDashboardThemeDetails
+      tags: [tiktok]
+      summary: Get elaborated descriptions for a given TikTok theme label
+      parameters:
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Theme descriptions from individual TikTok profiles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, items]
+                properties:
+                  label:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TikTokThemeDetailItem"
+
+  /tiktok/dashboard:
+    get:
+      operationId: getTikTokDashboard
+      tags: [tiktok]
+      summary: Get TikTok dashboard stats
+      responses:
+        "200":
+          description: TikTok dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TikTokDashboardStats"
+
+  /tiktok/users:
+    get:
+      operationId: listTikTokUsers
+      tags: [tiktok]
+      summary: List TikTok users with optional filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: sortBy
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of TikTok users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TikTokUserListResponse"
+
+  /tiktok/archetypes:
+    get:
+      operationId: listTikTokArchetypes
+      tags: [tiktok]
+      summary: List all archetypes with TikTok population stats
+      responses:
+        "200":
+          description: Archetype stats list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchetypeStat"
+
+  /tiktok/archetypes/{key}/users:
+    get:
+      operationId: getTikTokArchetypeUsers
+      tags: [tiktok]
+      summary: Get top TikTok users for a specific archetype
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: TikTok users with archetype scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TikTokUserWithScore"
+
+  /tiktok/search:
+    get:
+      operationId: searchTikTokUsers
+      tags: [tiktok]
+      summary: Search TikTok users by name or archetype filters
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: archetype
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TikTokUserWithScore"
+
+  /tiktok/users/{username}:
+    get:
+      operationId: getTikTokUser
+      tags: [tiktok]
+      summary: Get a single TikTok user profile with analysis
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: TikTok user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TikTokUserProfile"
+        "404":
+          description: User not found
+
+  /tiktok/classify:
+    post:
+      operationId: resumeTikTokClassification
+      tags: [tiktok]
+      summary: Classify all TikTok users that have ingested content but no current analysis
+      responses:
+        "202":
+          description: Classification started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+        "200":
+          description: Nothing to classify, or classification already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeClassificationResponse"
+
+  /finance/summary:
+    get:
+      operationId: getFinanceSummary
+      tags: [finance]
+      summary: Consolidated monthly cost summary (Apify + OpenAI + Platform subscription)
+      responses:
+        "200":
+          description: Finance summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceSummary"
+
+  /finance/users:
+    get:
+      operationId: getFinanceUsers
+      tags: [finance]
+      summary: Per-user cost breakdown (Apify + OpenAI), attributed to the initiating account
+      parameters:
+        - name: month
+          in: query
+          required: false
+          description: Restrict to a single month bucket (YYYY-MM, UTC). Omit for all-time totals.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Per-user cost breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinanceUsersResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    FinanceServiceBreakdown:
+      type: object
+      required: [apifyUsd, openaiUsd, totalUsd]
+      properties:
+        apifyUsd:
+          type: number
+        openaiUsd:
+          type: number
+        totalUsd:
+          type: number
+
+    FinanceMonthEntry:
+      type: object
+      required: [month, apifyUsd, openaiUsd, platformUsd, totalUsd, estimated]
+      properties:
+        month:
+          type: string
+          description: Month bucket in YYYY-MM (UTC)
+        apifyUsd:
+          type: number
+        openaiUsd:
+          type: number
+        platformUsd:
+          type: number
+          description: Platform subscription cost allocated to this month
+        totalUsd:
+          type: number
+        estimated:
+          type: boolean
+          description: True if any cost in this month was reconstructed/estimated (backfilled)
+
+    FinanceSummary:
+      type: object
+      required: [allTime, currentMonth, months, platformMonthlyUsd, platformNextPayment]
+      properties:
+        allTime:
+          $ref: "#/components/schemas/FinanceServiceBreakdown"
+        currentMonth:
+          $ref: "#/components/schemas/FinanceMonthEntry"
+        months:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinanceMonthEntry"
+        platformMonthlyUsd:
+          type: number
+          description: Platform subscription cost per month (annual / 12)
+        platformNextPayment:
+          type: ["string", "null"]
+          description: ISO date (YYYY-MM-DD) of the next Platform subscription payment
+
+    FinanceUserCost:
+      type: object
+      required: [appUser, apifyUsd, openaiUsd, totalUsd, tokensInput, tokensOutput, events, estimated]
+      properties:
+        appUser:
+          type: ["string", "null"]
+          description: app_users.username, or null for platform/shared costs
+        apifyUsd:
+          type: number
+        openaiUsd:
+          type: number
+        totalUsd:
+          type: number
+        tokensInput:
+          type: integer
+        tokensOutput:
+          type: integer
+        events:
+          type: integer
+        estimated:
+          type: boolean
+          description: True if any of this account's costs were reconstructed/estimated (backfilled)
+
+    FinanceUsersResponse:
+      type: object
+      required: [users, month]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinanceUserCost"
+        month:
+          type: ["string", "null"]
+          description: The month filter applied (YYYY-MM), or null for all-time
+
+    Subreddit:
+      type: object
+      required: [id, subredditName, displayName, active, createdAt]
+      properties:
+        id:
+          type: integer
+        subredditName:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+
+    SubredditInput:
+      type: object
+      required: [subredditName, displayName]
+      properties:
+        subredditName:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+
+    SubredditUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+        description:
+          type: string
+        active:
+          type: boolean
+
+    AuthUser:
+      type: object
+      required: [username, role]
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, member]
+
+    AppAccount:
+      type: object
+      required: [username, role, createdAt]
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, member]
+        createdAt:
+          type: string
+        lastSeen:
+          type: string
+          nullable: true
+
+    ListAccountsResponse:
+      type: object
+      required: [accounts]
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppAccount"
+
+    CreateAccountBody:
+      type: object
+      required: [username, password, role]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [admin, member]
+
+    UpdateAccountBody:
+      type: object
+      description: Fields to update on an account. Omit a field to leave it unchanged; password is only changed when a non-empty value is supplied.
+      properties:
+        password:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [admin, member]
+
+    LoginAttempt:
+      type: object
+      required: [id, username, success, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        success:
+          type: boolean
+        ipAddress:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    LoginAttemptsResponse:
+      type: object
+      required: [attempts, total]
+      properties:
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/LoginAttempt"
+        total:
+          type: integer
+
+    ApifyTestResult:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        username:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+
+    RedditUser:
+      type: object
+      required: [id, username, firstSeen, lastSeen, totalComments, totalPosts]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        firstSeen:
+          type: ["string", "null"]
+        lastSeen:
+          type: ["string", "null"]
+        totalComments:
+          type: integer
+        totalPosts:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        arcticCrawledAt:
+          type: ["string", "null"]
+
+    ArchetypeScore:
+      type: object
+      required: [archetypeKey, archetypeName, score, confidence]
+      properties:
+        archetypeKey:
+          type: string
+        archetypeName:
+          type: string
+        score:
+          type: integer
+        confidence:
+          type: integer
+        explanation:
+          type: ["string", "null"]
+        evidence:
+          type: array
+          items:
+            type: string
+
+    Analysis:
+      type: object
+      required: [id, createdAt, dominantArchetypes, summary, recurringThemes, confidenceNotes]
+      properties:
+        id:
+          type: integer
+        createdAt:
+          type: string
+        dominantArchetypes:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        recurringThemes:
+          type: array
+          items:
+            type: string
+        confidenceNotes:
+          type: string
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+
+    UserProfile:
+      type: object
+      required: [user, latestAnalysis, archetypeScores]
+      properties:
+        user:
+          $ref: "#/components/schemas/RedditUser"
+        latestAnalysis:
+          $ref: "#/components/schemas/Analysis"
+          nullable: true
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+        recentPosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostSummary"
+        recentComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentSummary"
+        identifiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Identifier"
+        flaggedComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlaggedUserComment"
+
+    FlaggedUserComment:
+      type: object
+      required: [id, issue, excerpt, author, subreddit, createdAt, flaggedAt]
+      properties:
+        id:
+          type: integer
+        issue:
+          type: string
+        excerpt:
+          type: string
+        author:
+          type: string
+        subreddit:
+          type: string
+        permalink:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        flaggedAt:
+          type: string
+
+    IdentifierSource:
+      type: object
+      required: [quote, sourceType, postedAt]
+      properties:
+        quote:
+          type: string
+        permalink:
+          type: ["string", "null"]
+        sourceType:
+          type: string
+          enum: [post, comment]
+        postedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    Identifier:
+      type: object
+      required: [category, value, sources]
+      properties:
+        category:
+          type: string
+        value:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/IdentifierSource"
+
+    PostSummary:
+      type: object
+      required: [id, title, score, createdAt, permalink]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        score:
+          type: integer
+        createdAt:
+          type: string
+        permalink:
+          type: string
+        recoveredAt:
+          type: ["string", "null"]
+
+    CommentSummary:
+      type: object
+      required: [id, body, score, createdAt, subreddit]
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        score:
+          type: integer
+        createdAt:
+          type: string
+        subreddit:
+          type: string
+        permalink:
+          type: string
+          nullable: true
+        recoveredAt:
+          type: ["string", "null"]
+
+    UserListResponse:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserWithScore"
+        total:
+          type: integer
+
+    UserWithScore:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/RedditUser"
+        dominantArchetype:
+          type: ["string", "null"]
+        topScore:
+          type: ["integer", "null"]
+        analysisCount:
+          type: integer
+
+    UserComparison:
+      type: object
+      required: [user1, user2, similarityScore, sharedThemes, archetypeComparison]
+      properties:
+        user1:
+          $ref: "#/components/schemas/UserProfile"
+        user2:
+          $ref: "#/components/schemas/UserProfile"
+        similarityScore:
+          type: integer
+        sharedThemes:
+          type: array
+          items:
+            type: string
+        majorDifferences:
+          type: array
+          items:
+            type: string
+        archetypeComparison:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeCompareRow"
+
+    ArchetypeCompareRow:
+      type: object
+      required: [archetypeKey, archetypeName, scoreUser1, scoreUser2]
+      properties:
+        archetypeKey:
+          type: string
+        archetypeName:
+          type: string
+        scoreUser1:
+          type: integer
+        scoreUser2:
+          type: integer
+
+    ArchetypeStat:
+      type: object
+      required: [key, name, description, userCount, averageScore, topThemes]
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        indicators:
+          type: array
+          items:
+            type: string
+        userCount:
+          type: integer
+        averageScore:
+          type: integer
+        topThemes:
+          type: array
+          items:
+            type: string
+        relatedArchetypes:
+          type: array
+          items:
+            type: string
+
+    TrendPoint:
+      type: object
+      required: [date, archetypeKey, score]
+      properties:
+        date:
+          type: string
+        archetypeKey:
+          type: string
+        archetypeName:
+          type: string
+        score:
+          type: integer
+
+    Job:
+      type: object
+      required: [id, jobType, status, createdAt]
+      properties:
+        id:
+          type: integer
+        source:
+          type: string
+          enum: [job, sentiment]
+          description: >-
+            Where this row originates: "job" = background jobs table (crawls,
+            classification batches); "sentiment" = a topic sentiment analysis
+            report run. Ids are only unique within a source.
+        jobType:
+          type: string
+        title:
+          type: ["string", "null"]
+          description: >-
+            Human-readable subject for the row (e.g. the topic summary for a
+            sentiment report). Null for rows with no distinct subject.
+        status:
+          type: string
+        subredditId:
+          type: ["integer", "null"]
+        subredditName:
+          type: ["string", "null"]
+        targetUsername:
+          type: ["string", "null"]
+        postUrl:
+          type: ["string", "null"]
+        progress:
+          type: ["integer", "null"]
+        total:
+          type: ["integer", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        launchedBy:
+          type: ["string", "null"]
+          description: >-
+            Username of the account that launched this job/report, when known.
+            Null for system-initiated work or historical rows created before
+            attribution was tracked.
+
+    CrawlInput:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [posts, comments, both, user]
+          description: >-
+            posts = posts only from a subreddit; both = posts and their comments
+            from a subreddit; comments = comments from a single specific Reddit
+            post URL (requires postUrl, not a subreddit); user = a single Reddit
+            user's full post/comment history via the free Arctic Shift archive
+            (requires username), including content since deleted on live Reddit.
+        subreddit:
+          type: string
+          description: >-
+            Target subreddit name (without the r/ prefix) for mode=posts and
+            mode=both. The subreddit is found-or-created automatically, so it does
+            not need to be pre-registered. Ignored for mode=comments.
+        subredditId:
+          type: integer
+          description: >-
+            Optional legacy alternative to `subreddit` for mode=posts/both — the
+            id of an already-tracked subreddit. Ignored for mode=comments.
+        postLimit:
+          type: integer
+          description: Max posts to fetch for mode=posts/both. Defaults to 50.
+        postUrl:
+          type: string
+          description: Required for mode=comments. A full Reddit post/thread URL.
+        username:
+          type: string
+          description: >-
+            Required for mode=user. The Reddit username to investigate (with or
+            without a u/ prefix); their history is fetched from Arctic Shift.
+        contentType:
+          type: string
+          enum: [posts, comments, both]
+          description: >-
+            For mode=user: which of the user's content to fetch. Defaults to both.
+        maxItems:
+          type: integer
+          description: >-
+            For mode=user: hard cap on items fetched per content type (1–5000).
+            Defaults to 1000.
+        refresh:
+          type: string
+          enum: [incremental, full]
+          description: >-
+            For mode=user: incremental (default) only fetches content newer than
+            what's already stored for this user; full re-walks the entire history
+            (deduped by Reddit id either way).
+
+    ResumeClassificationResponse:
+      type: object
+      required: [status, pending]
+      properties:
+        status:
+          type: string
+          enum: [started, already_running, nothing_to_do]
+        pending:
+          type: integer
+
+    ListJobsResponse:
+      type: object
+      required: [jobs, total]
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        total:
+          type: integer
+
+    ApifySettings:
+      type: object
+      required: [configured, actorId, facebookActorId, instagramActorId, tiktokActorId, twitterActorId, youtubeActorId, arcticFallbackEnabled]
+      properties:
+        configured:
+          type: boolean
+        maskedKey:
+          type: ["string", "null"]
+        actorId:
+          type: string
+        facebookActorId:
+          type: string
+        instagramActorId:
+          type: string
+        tiktokActorId:
+          type: string
+        twitterActorId:
+          type: string
+        youtubeActorId:
+          type: string
+        arcticFallbackEnabled:
+          type: boolean
+
+    ApifySettingsInput:
+      type: object
+      properties:
+        apiKey:
+          type: ["string", "null"]
+        actorId:
+          type: ["string", "null"]
+        facebookActorId:
+          type: ["string", "null"]
+        instagramActorId:
+          type: ["string", "null"]
+        tiktokActorId:
+          type: ["string", "null"]
+        twitterActorId:
+          type: ["string", "null"]
+        youtubeActorId:
+          type: ["string", "null"]
+        arcticFallbackEnabled:
+          type: ["boolean", "null"]
+
+    FacebookUser:
+      type: object
+      required: [id, profileId, displayName, firstSeen, lastSeen, totalComments, totalPosts]
+      properties:
+        id:
+          type: integer
+        profileId:
+          type: string
+        displayName:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        firstSeen:
+          type: ["string", "null"]
+        lastSeen:
+          type: ["string", "null"]
+        totalComments:
+          type: integer
+        totalPosts:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+
+    FacebookUserWithScore:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/FacebookUser"
+        dominantArchetype:
+          type: ["string", "null"]
+        topScore:
+          type: ["integer", "null"]
+        analysisCount:
+          type: integer
+
+    FacebookUserListResponse:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacebookUserWithScore"
+        total:
+          type: integer
+
+    FacebookCommentSummary:
+      type: object
+      required: [id, body, likes, createdAt]
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        likes:
+          type: integer
+        createdAt:
+          type: string
+        commentUrl:
+          type: ["string", "null"]
+
+    FacebookUserProfile:
+      type: object
+      required: [user, latestAnalysis, archetypeScores, recentComments]
+      properties:
+        user:
+          $ref: "#/components/schemas/FacebookUser"
+        latestAnalysis:
+          $ref: "#/components/schemas/Analysis"
+          nullable: true
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+        recentComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacebookCommentSummary"
+
+    FacebookDashboardStats:
+      type: object
+      required: [totalUsers, totalPosts, totalComments, totalAnalyses, analyzedUsers, unanalyzedUsers, activeJobs, archetypeDistribution, activityByDay, topUsers]
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalComments:
+          type: integer
+        totalAnalyses:
+          type: integer
+        analyzedUsers:
+          type: integer
+        unanalyzedUsers:
+          type: integer
+        activeJobs:
+          type: integer
+        archetypeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeDistributionItem"
+        activityByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityByDay"
+        topUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacebookUserWithScore"
+        topThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThemeCount"
+
+    DashboardStats:
+      type: object
+      required: [totalUsers, totalPosts, totalComments, totalAnalyses, analyzedUsers, unanalyzedUsers, activeJobs, archetypeDistribution, activityByDay, topUsers]
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalComments:
+          type: integer
+        totalAnalyses:
+          type: integer
+        analyzedUsers:
+          type: integer
+        unanalyzedUsers:
+          type: integer
+        activeJobs:
+          type: integer
+        archetypeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeDistributionItem"
+        activityByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityByDay"
+        topUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserWithScore"
+        topThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThemeCount"
+
+    ArchetypeDistributionItem:
+      type: object
+      required: [archetypeKey, archetypeName, userCount, percentage]
+      properties:
+        archetypeKey:
+          type: string
+        archetypeName:
+          type: string
+        userCount:
+          type: integer
+        percentage:
+          type: number
+
+    ActivityByDay:
+      type: object
+      required: [date, posts, comments]
+      properties:
+        date:
+          type: string
+        posts:
+          type: integer
+        comments:
+          type: integer
+
+    ThemeCount:
+      type: object
+      required: [theme, count]
+      properties:
+        theme:
+          type: string
+        count:
+          type: integer
+
+    ThemeDetailItem:
+      type: object
+      required: [username, description]
+      properties:
+        username:
+          type: string
+        description:
+          type: string
+
+    FacebookThemeDetailItem:
+      type: object
+      required: [profileId, displayName, description]
+      properties:
+        profileId:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+
+    InstagramUser:
+      type: object
+      required: [id, username, displayName, firstSeen, lastSeen, totalComments, totalPosts]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        firstSeen:
+          type: ["string", "null"]
+        lastSeen:
+          type: ["string", "null"]
+        totalComments:
+          type: integer
+        totalPosts:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+
+    InstagramUserWithScore:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/InstagramUser"
+        dominantArchetype:
+          type: ["string", "null"]
+        topScore:
+          type: ["integer", "null"]
+        analysisCount:
+          type: integer
+
+    InstagramUserListResponse:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstagramUserWithScore"
+        total:
+          type: integer
+
+    InstagramCommentSummary:
+      type: object
+      required: [id, body, likes, createdAt]
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        likes:
+          type: integer
+        createdAt:
+          type: string
+        commentUrl:
+          type: ["string", "null"]
+
+    InstagramUserProfile:
+      type: object
+      required: [user, latestAnalysis, archetypeScores, recentComments]
+      properties:
+        user:
+          $ref: "#/components/schemas/InstagramUser"
+        latestAnalysis:
+          $ref: "#/components/schemas/Analysis"
+          nullable: true
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+        recentComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstagramCommentSummary"
+
+    InstagramDashboardStats:
+      type: object
+      required: [totalUsers, totalPosts, totalComments, totalAnalyses, analyzedUsers, unanalyzedUsers, activeJobs, archetypeDistribution, activityByDay, topUsers]
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalComments:
+          type: integer
+        totalAnalyses:
+          type: integer
+        analyzedUsers:
+          type: integer
+        unanalyzedUsers:
+          type: integer
+        activeJobs:
+          type: integer
+        archetypeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeDistributionItem"
+        activityByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityByDay"
+        topUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstagramUserWithScore"
+        topThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThemeCount"
+
+    InstagramThemeDetailItem:
+      type: object
+      required: [username, displayName, description]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+    TwitterUser:
+      type: object
+      required: [id, username, displayName, firstSeen, lastSeen, totalComments, totalPosts]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        firstSeen:
+          type: ["string", "null"]
+        lastSeen:
+          type: ["string", "null"]
+        totalComments:
+          type: integer
+        totalPosts:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+
+    TwitterUserWithScore:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/TwitterUser"
+        dominantArchetype:
+          type: ["string", "null"]
+        topScore:
+          type: ["integer", "null"]
+        analysisCount:
+          type: integer
+
+    TwitterUserListResponse:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/TwitterUserWithScore"
+        total:
+          type: integer
+
+    TwitterCommentSummary:
+      type: object
+      required: [id, body, likes, createdAt]
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        likes:
+          type: integer
+        createdAt:
+          type: string
+        commentUrl:
+          type: ["string", "null"]
+
+    TwitterUserProfile:
+      type: object
+      required: [user, latestAnalysis, archetypeScores, recentComments]
+      properties:
+        user:
+          $ref: "#/components/schemas/TwitterUser"
+        latestAnalysis:
+          $ref: "#/components/schemas/Analysis"
+          nullable: true
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+        recentComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/TwitterCommentSummary"
+
+    TwitterDashboardStats:
+      type: object
+      required: [totalUsers, totalPosts, totalComments, totalAnalyses, analyzedUsers, unanalyzedUsers, activeJobs, archetypeDistribution, activityByDay, topUsers]
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalComments:
+          type: integer
+        totalAnalyses:
+          type: integer
+        analyzedUsers:
+          type: integer
+        unanalyzedUsers:
+          type: integer
+        activeJobs:
+          type: integer
+        archetypeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeDistributionItem"
+        activityByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityByDay"
+        topUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/TwitterUserWithScore"
+        topThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThemeCount"
+
+    TwitterThemeDetailItem:
+      type: object
+      required: [username, displayName, description]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+
+
+    YoutubeUser:
+      type: object
+      required: [id, username, displayName, firstSeen, lastSeen, totalComments, totalPosts]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        firstSeen:
+          type: ["string", "null"]
+        lastSeen:
+          type: ["string", "null"]
+        totalComments:
+          type: integer
+        totalPosts:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+
+    YoutubeUserWithScore:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/YoutubeUser"
+        dominantArchetype:
+          type: ["string", "null"]
+        topScore:
+          type: ["integer", "null"]
+        analysisCount:
+          type: integer
+
+    YoutubeUserListResponse:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/YoutubeUserWithScore"
+        total:
+          type: integer
+
+    YoutubeCommentSummary:
+      type: object
+      required: [id, body, likes, createdAt]
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        likes:
+          type: integer
+        createdAt:
+          type: string
+        commentUrl:
+          type: ["string", "null"]
+
+    YoutubeUserProfile:
+      type: object
+      required: [user, latestAnalysis, archetypeScores, recentComments]
+      properties:
+        user:
+          $ref: "#/components/schemas/YoutubeUser"
+        latestAnalysis:
+          $ref: "#/components/schemas/Analysis"
+          nullable: true
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+        recentComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/YoutubeCommentSummary"
+
+    YoutubeDashboardStats:
+      type: object
+      required: [totalUsers, totalPosts, totalComments, totalAnalyses, analyzedUsers, unanalyzedUsers, activeJobs, archetypeDistribution, activityByDay, topUsers]
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalComments:
+          type: integer
+        totalAnalyses:
+          type: integer
+        analyzedUsers:
+          type: integer
+        unanalyzedUsers:
+          type: integer
+        activeJobs:
+          type: integer
+        archetypeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeDistributionItem"
+        activityByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityByDay"
+        topUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/YoutubeUserWithScore"
+        topThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThemeCount"
+
+    YoutubeThemeDetailItem:
+      type: object
+      required: [username, displayName, description]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+
+
+    TikTokUser:
+      type: object
+      required: [id, username, displayName, firstSeen, lastSeen, totalComments, totalPosts]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        profileUrl:
+          type: ["string", "null"]
+        firstSeen:
+          type: ["string", "null"]
+        lastSeen:
+          type: ["string", "null"]
+        totalComments:
+          type: integer
+        totalPosts:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+
+    TikTokUserWithScore:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/TikTokUser"
+        dominantArchetype:
+          type: ["string", "null"]
+        topScore:
+          type: ["integer", "null"]
+        analysisCount:
+          type: integer
+
+    TikTokUserListResponse:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/TikTokUserWithScore"
+        total:
+          type: integer
+
+    TikTokCommentSummary:
+      type: object
+      required: [id, body, likes, createdAt]
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+        likes:
+          type: integer
+        createdAt:
+          type: string
+        commentUrl:
+          type: ["string", "null"]
+
+    TikTokUserProfile:
+      type: object
+      required: [user, latestAnalysis, archetypeScores, recentComments]
+      properties:
+        user:
+          $ref: "#/components/schemas/TikTokUser"
+        latestAnalysis:
+          $ref: "#/components/schemas/Analysis"
+          nullable: true
+        archetypeScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeScore"
+        recentComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/TikTokCommentSummary"
+
+    TikTokDashboardStats:
+      type: object
+      required: [totalUsers, totalPosts, totalComments, totalAnalyses, analyzedUsers, unanalyzedUsers, activeJobs, archetypeDistribution, activityByDay, topUsers]
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalComments:
+          type: integer
+        totalAnalyses:
+          type: integer
+        analyzedUsers:
+          type: integer
+        unanalyzedUsers:
+          type: integer
+        activeJobs:
+          type: integer
+        archetypeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchetypeDistributionItem"
+        activityByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityByDay"
+        topUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/TikTokUserWithScore"
+        topThemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ThemeCount"
+
+    TikTokThemeDetailItem:
+      type: object
+      required: [username, displayName, description]
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+
+    TopicAnalysisInput:
+      type: object
+      required: [topicSummary, urls]
+      properties:
+        topicSummary:
+          type: string
+          description: Free-text description of the topic under investigation.
+        urls:
+          type: array
+          description: Up to 20 Reddit post/thread URLs whose comments will be analysed.
+          items:
+            type: string
+        themeHints:
+          type: array
+          description: >-
+            Optional list of themes the analyst wants the AI to look for and
+            prioritise when grouping comments (e.g. "housing", "cost of living").
+            When omitted or empty, themes are chosen fully automatically.
+          items:
+            type: string
+        themeCount:
+          type: ["integer", "null"]
+          description: >-
+            Optional desired number of themes to group comments into (2-8). When
+            omitted, the AI picks an appropriate number (3-5).
+          minimum: 2
+          maximum: 8
+
+    IngestRunInput:
+      type: object
+      required: [url, runId]
+      properties:
+        url:
+          type: string
+          description: One of the analysis's input URLs to ingest (must not already have comments).
+        runId:
+          type: string
+          description: The Apify actor-run ID whose dataset should be ingested for this URL.
+      additionalProperties: false
+
+    ReanalyzeTopicRequest:
+      type: object
+      properties:
+        clearSteering:
+          type: boolean
+          description: When true, discard the run's stored theme hints and theme count and re-group fully automatically (zero credits, no re-crawl).
+    TopicAnalysisSummary:
+      type: object
+      required: [id, topicSummary, status, inputUrls, postCount, commentCount, createdAt]
+      properties:
+        id:
+          type: integer
+        topicSummary:
+          type: string
+        status:
+          type: string
+          description: pending | running | completed | failed
+        createdBy:
+          type: ["string", "null"]
+          description: Username of the account that created this analysis, or null for legacy rows.
+        inputUrls:
+          type: array
+          items:
+            type: string
+        themeHints:
+          type: array
+          description: Theme hints the analyst supplied to steer this run (empty for automatic).
+          items:
+            type: string
+        themeCount:
+          type: ["integer", "null"]
+          description: Desired number of themes the analyst requested, or null for automatic.
+        postCount:
+          type: integer
+        commentCount:
+          type: integer
+        threadsTotal:
+          type: integer
+          description: Total threads to crawl for this run.
+        threadsDone:
+          type: integer
+          description: Threads crawled so far (updated live while running).
+        commentsGathered:
+          type: integer
+          description: Comments gathered so far (updated live while running).
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+
+    TopicAnalysisDetail:
+      allOf:
+        - $ref: "#/components/schemas/TopicAnalysisSummary"
+        - type: object
+          properties:
+            result:
+              oneOf:
+                - $ref: "#/components/schemas/TopicAnalysisResult"
+                - type: "null"
+            posts:
+              type: array
+              items:
+                $ref: "#/components/schemas/TopicAnalysisPost"
+            gatheredComments:
+              type: array
+              items:
+                $ref: "#/components/schemas/GatheredComment"
+
+    TopicAnalysisPost:
+      type: object
+      required: [url, commentCount, score]
+      properties:
+        url:
+          type: string
+        title:
+          type: ["string", "null"]
+        commentCount:
+          type: integer
+        score:
+          type: integer
+
+    TopicAnalysisResult:
+      type: object
+      required: [executiveSummary, themes, flagged, otherComments]
+      properties:
+        executiveSummary:
+          type: string
+        themes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicTheme"
+        flagged:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlaggedComment"
+        otherComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RepresentativeComment"
+
+    TopicTheme:
+      type: object
+      required: [name, commentCount, percentage, summary, representativeComments, comments]
+      properties:
+        name:
+          type: string
+        commentCount:
+          type: integer
+        percentage:
+          type: number
+        summary:
+          type: array
+          items:
+            type: string
+        representativeComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RepresentativeComment"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RepresentativeComment"
+
+    RepresentativeComment:
+      type: object
+      required: [author, excerpt, permalink]
+      properties:
+        author:
+          type: string
+        excerpt:
+          type: string
+        permalink:
+          type: string
+
+    FlaggedComment:
+      type: object
+      required: [issue, excerpt, author, permalink]
+      properties:
+        issue:
+          type: string
+        excerpt:
+          type: string
+        author:
+          type: string
+        permalink:
+          type: string
+
+    GatheredComment:
+      type: object
+      required: [author, body, permalink, score]
+      properties:
+        author:
+          type: string
+        body:
+          type: string
+        permalink:
+          type: string
+        score:
+          type: number
+        commentKey:
+          type: string
