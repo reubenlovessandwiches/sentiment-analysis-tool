@@ -612,6 +612,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/UserWithScore"
 
+  /archetypes/derive:
+    post:
+      operationId: deriveArchetypes
+      tags: [archetypes]
+      summary: Regenerate the archetype taxonomy for a community in the background
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeriveArchetypesInput"
+      responses:
+        "202":
+          description: Archetype derivation job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "400":
+          description: Bad request
+
   /search:
     get:
       operationId: searchUsers
@@ -2604,6 +2625,19 @@ components:
           enum: [started, already_running, nothing_to_do]
         pending:
           type: integer
+
+    DeriveArchetypesInput:
+      type: object
+      required: [source]
+      properties:
+        source:
+          type: string
+          description: >-
+            The community to fit the taxonomy to (e.g. a subreddit reference like
+            "r/politics").
+        description:
+          type: string
+          description: Optional extra context describing the community.
 
     ListJobsResponse:
       type: object

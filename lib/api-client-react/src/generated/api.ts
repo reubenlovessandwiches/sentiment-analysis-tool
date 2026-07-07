@@ -32,6 +32,7 @@ import type {
   CreateAccountBody,
   DashboardStats,
   DeleteAccount200,
+  DeriveArchetypesInput,
   FacebookDashboardStats,
   FacebookUserListResponse,
   FacebookUserProfile,
@@ -1975,6 +1976,77 @@ export function useGetArchetypeUsers<TData = Awaited<ReturnType<typeof getArchet
 
 
 
+
+export const getDeriveArchetypesUrl = () => {
+
+
+
+
+  return `/api/archetypes/derive`
+}
+
+/**
+ * @summary Regenerate the archetype taxonomy for a community in the background
+ */
+export const deriveArchetypes = async (deriveArchetypesInput: DeriveArchetypesInput, options?: RequestInit): Promise<Job> => {
+
+  return customFetch<Job>(getDeriveArchetypesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deriveArchetypesInput,)
+  }
+);}
+
+
+
+
+export const getDeriveArchetypesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deriveArchetypes>>, TError,{data: BodyType<DeriveArchetypesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deriveArchetypes>>, TError,{data: BodyType<DeriveArchetypesInput>}, TContext> => {
+
+const mutationKey = ['deriveArchetypes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deriveArchetypes>>, {data: BodyType<DeriveArchetypesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deriveArchetypes(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeriveArchetypesMutationResult = NonNullable<Awaited<ReturnType<typeof deriveArchetypes>>>
+    export type DeriveArchetypesMutationBody = BodyType<DeriveArchetypesInput>
+    export type DeriveArchetypesMutationError = ErrorType<void>
+
+    /**
+ * @summary Regenerate the archetype taxonomy for a community in the background
+ */
+export const useDeriveArchetypes = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deriveArchetypes>>, TError,{data: BodyType<DeriveArchetypesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deriveArchetypes>>,
+        TError,
+        {data: BodyType<DeriveArchetypesInput>},
+        TContext
+      > => {
+      return useMutation(getDeriveArchetypesMutationOptions(options));
+    }
 
 export const getSearchUsersUrl = (params?: SearchUsersParams,) => {
   const normalizedParams = new URLSearchParams();

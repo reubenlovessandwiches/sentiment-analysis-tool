@@ -642,6 +642,15 @@ export const GetArchetypeUsersResponse = zod.array(GetArchetypeUsersResponseItem
 
 
 /**
+ * @summary Regenerate the archetype taxonomy for a community in the background
+ */
+export const DeriveArchetypesBody = zod.object({
+  "source": zod.string().describe('The community to fit the taxonomy to (e.g. a subreddit reference like \"r\/politics\").'),
+  "description": zod.string().optional().describe('Optional extra context describing the community.')
+})
+
+
+/**
  * @summary Search users by username or archetype filters
  */
 export const SearchUsersQueryParams = zod.object({
