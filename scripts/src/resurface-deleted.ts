@@ -78,7 +78,7 @@ async function fetchByIds(
     for (let attempt = 0; attempt < 4; attempt++) {
       let res: Response;
       try {
-        res = await fetch(url, { headers: { "User-Agent": "AstroOrbiter/1.0 (community-intelligence)" } });
+        res = await fetch(url, { headers: { "User-Agent": "App/1.0 (community-intelligence)" } });
       } catch {
         await sleep(1000 * (attempt + 1));
         continue;
