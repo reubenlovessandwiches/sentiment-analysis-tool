@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Rocket, Lock } from "lucide-react";
+import { Network, Lock } from "lucide-react";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -44,10 +44,10 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-sm space-y-6 px-4">
         <div className="flex flex-col items-center gap-3">
           <div className="bg-primary/10 p-3 rounded-xl border border-primary/20">
-            <Rocket className="w-8 h-8 text-primary" />
+            <Network className="w-8 h-8 text-primary" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight">ASTRO ORBITER</h1>
+            <h1 className="text-2xl font-bold tracking-tight">APP</h1>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider mt-1">Operations Center — Restricted Access</p>
           </div>
         </div>
