@@ -9,6 +9,7 @@ export const SETTING_APIFY_TIKTOK_ACTOR_ID = "apify_tiktok_actor_id";
 export const SETTING_APIFY_TWITTER_ACTOR_ID = "apify_twitter_actor_id";
 export const SETTING_APIFY_YOUTUBE_ACTOR_ID = "apify_youtube_actor_id";
 export const SETTING_ARCTIC_FALLBACK = "arctic_fallback_enabled";
+export const SETTING_ARCHETYPES = "archetypes_json";
 
 // Finance / cost tracking. OpenAI prices are USD per 1,000,000 tokens. the OpenAI-compatible API
 // Integrations pass OpenAI tokens through at OpenAI's public list price (no
