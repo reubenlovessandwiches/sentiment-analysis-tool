@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   Settings, 
-  Rocket,
+  Network,
   LogOut,
   Home,
   FileText,
@@ -78,10 +78,10 @@ export function Sidebar() {
     <div className="no-print flex flex-col w-64 h-full border-r border-border bg-card/50 glass">
       <div className="p-6 flex items-center gap-3 border-b border-border/50">
         <div className="bg-primary/10 p-2 rounded-md border border-primary/20">
-          <Rocket className="w-6 h-6 text-primary" />
+          <Network className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="font-bold text-lg tracking-tight text-foreground">ASTRO ORBITER</h1>
+          <h1 className="font-bold text-lg tracking-tight text-foreground">APP</h1>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Operations Center</p>
         </div>
       </div>
