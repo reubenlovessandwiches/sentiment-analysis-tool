@@ -21,6 +21,9 @@ import {
   getGetTwitterDashboardQueryKey,
   useGetYoutubeDashboard,
   getGetYoutubeDashboardQueryKey,
+  useDeriveArchetypes,
+  useListArchetypes,
+  getListArchetypesQueryKey,
   useGetApifySettings,
   getGetApifySettingsQueryKey,
   useUpdateApifySettings,
@@ -38,7 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Activity, KeyRound, CheckCircle2, AlertCircle, RefreshCw, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft, Wifi } from "lucide-react";
+import { Activity, KeyRound, CheckCircle2, AlertCircle, RefreshCw, Sparkles, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft, Wifi } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
 import { FaRedditAlien } from "react-icons/fa";
 import type { IconType } from "react-icons";
@@ -137,6 +140,8 @@ export default function Admin() {
   const [apifyArcticFallback, setApifyArcticFallback] = useState(true);
   const [expandedJobs, setExpandedJobs] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
+  const [deriveSource, setDeriveSource] = useState("");
+  const [deriveDescription, setDeriveDescription] = useState("");
 
   const toggleJob = (key: string) =>
     setExpandedJobs(prev => {
@@ -153,6 +158,37 @@ export default function Admin() {
   const jobs = jobsData?.jobs;
   const jobsTotal = jobsData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(jobsTotal / PAGE_SIZE));
+
+  const deriveArchetypesMutation = useDeriveArchetypes();
+  const { data: currentArchetypes } = useListArchetypes(undefined, {
+    query: { queryKey: getListArchetypesQueryKey(), refetchInterval: 10000 },
+  });
+  const deriveJob = jobs?.find((j) => j.jobType === "derive_archetypes");
+  const deriveRunning =
+    deriveArchetypesMutation.isPending ||
+    deriveJob?.status === "running" ||
+    deriveJob?.status === "pending";
+
+  const handleDeriveArchetypes = (e: React.FormEvent) => {
+    e.preventDefault();
+    const source = deriveSource.trim();
+    if (!source) {
+      toast({ title: "Missing community", description: "Enter a subreddit reference first.", variant: "destructive" });
+      return;
+    }
+    deriveArchetypesMutation.mutate(
+      { data: { source, description: deriveDescription.trim() || undefined } },
+      {
+        onSuccess: () => {
+          toast({ title: "Regenerating archetypes", description: "Running in the background — this can take up to a minute." });
+          queryClient.invalidateQueries({ queryKey: getListJobsQueryKey(jobsParams) });
+        },
+        onError: (err) => {
+          toast({ title: "Could not start", description: err instanceof Error ? err.message : "Request failed.", variant: "destructive" });
+        },
+      },
+    );
+  };
 
   const { data: fbDashboard } = useGetFacebookDashboard({
     query: { queryKey: getGetFacebookDashboardQueryKey(), refetchInterval: 10000 },
@@ -503,6 +539,79 @@ export default function Admin() {
             </p>
           </CardContent>
         </Card>
+
+        {isAdmin && (
+        <Card className="glass col-span-1 lg:col-span-2 border-primary/20">
+          <CardHeader>
+            <CardTitle className="font-mono text-sm text-muted-foreground tracking-wider flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                ARCHETYPE TAXONOMY
+              </span>
+              {currentArchetypes ? (
+                <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20">
+                  {currentArchetypes.length} ACTIVE
+                </Badge>
+              ) : null}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+              Regenerate the fixed set of archetypes used to classify every user. Point it at the
+              community you analyse and the taxonomy is re-derived by AI in the background, then
+              applied to all future classification. Existing analyses are unchanged until users are
+              re-classified.
+            </p>
+            <form onSubmit={handleDeriveArchetypes} className="space-y-4">
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-2 block">SUBREDDIT / COMMUNITY REFERENCE</label>
+                <Input
+                  value={deriveSource}
+                  onChange={(e) => setDeriveSource(e.target.value)}
+                  placeholder="r/politics"
+                  className="bg-background/50 font-mono"
+                  disabled={deriveRunning}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-2 block">DESCRIPTION (OPTIONAL)</label>
+                <Input
+                  value={deriveDescription}
+                  onChange={(e) => setDeriveDescription(e.target.value)}
+                  placeholder="e.g. US national politics discussion"
+                  className="bg-background/50 font-mono"
+                  disabled={deriveRunning}
+                />
+              </div>
+              <Button type="submit" variant="secondary" className="w-full font-mono" disabled={deriveRunning}>
+                {deriveRunning ? "REGENERATING…" : "REGENERATE ARCHETYPES"}
+              </Button>
+              {deriveJob && (
+                <div className={`flex items-center gap-2 text-xs font-mono rounded-md px-3 py-2 border ${
+                  deriveJob.status === "completed"
+                    ? "bg-primary/10 text-primary border-primary/20"
+                    : deriveJob.status === "failed"
+                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                      : "bg-muted/30 text-muted-foreground border-border/40"
+                }`}>
+                  {deriveJob.status === "completed"
+                    ? <><CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Regenerated {deriveJob.total ?? 0} archetypes for {deriveJob.targetUsername}</>
+                    : deriveJob.status === "failed"
+                      ? <><AlertCircle className="w-3.5 h-3.5 shrink-0" /> {deriveJob.errorMessage ?? "Failed to regenerate."}</>
+                      : <><RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" /> Regenerating for {deriveJob.targetUsername}…</>
+                  }
+                </div>
+              )}
+              {currentArchetypes && currentArchetypes.length > 0 && (
+                <div className="text-[10px] font-mono text-muted-foreground border border-border/40 rounded-md px-3 py-2 bg-background/30">
+                  <p className="font-semibold text-foreground/70 mb-1">CURRENT TAXONOMY</p>
+                  <p className="leading-relaxed">{currentArchetypes.map((a) => a.name).join(" · ")}</p>
+                </div>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+        )}
 
         <Card className="glass col-span-1 lg:col-span-2 border-primary/20">
           <CardHeader>
