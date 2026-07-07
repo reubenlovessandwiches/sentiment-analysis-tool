@@ -5,6 +5,7 @@ import { logger } from "./lib/logger";
 import { cleanupOrphanedJobs } from "./routes/jobs";
 import { seedMainAdmin } from "./lib/auth";
 import { backfillLegacyReportAuthors } from "./routes/topic-analyses";
+import { loadArchetypesFromDb } from "./lib/archetypes";
 
 const rawPort = process.env["PORT"];
 
@@ -49,6 +50,14 @@ async function start(): Promise<void> {
     await backfillLegacyReportAuthors();
   } catch (backfillErr) {
     logger.error({ err: backfillErr }, "Failed to backfill legacy report authors on startup");
+  }
+
+  // Load a community-specific archetype taxonomy from the DB if one was derived,
+  // otherwise the default taxonomy shipped in archetypes.ts stays in effect.
+  try {
+    await loadArchetypesFromDb();
+  } catch (archErr) {
+    logger.error({ err: archErr }, "Failed to load archetype taxonomy from DB on startup");
   }
 
   app.listen(port, (err) => {
