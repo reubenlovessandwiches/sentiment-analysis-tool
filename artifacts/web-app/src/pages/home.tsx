@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Rocket,
+  Network,
   Globe,
   Users,
   MessageSquare,
@@ -61,7 +61,7 @@ export default function Home() {
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
         <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
-          <Rocket className="w-7 h-7 text-primary" />
+          <Network className="w-7 h-7 text-primary" />
         </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to App</h1>
