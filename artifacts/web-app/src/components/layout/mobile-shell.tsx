@@ -1,6 +1,6 @@
 import { Link, useLocation, Redirect, Switch, Route } from "wouter";
 import { lazy, Suspense } from "react";
-import { Rocket, Globe, FileText, Monitor, LogOut } from "lucide-react";
+import { Network, Globe, FileText, Monitor, LogOut } from "lucide-react";
 import { useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -61,11 +61,11 @@ function MobileShell({ children }: { children: React.ReactNode }) {
         <div className="px-4 pt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="bg-primary/10 p-1.5 rounded-md border border-primary/20">
-              <Rocket className="w-5 h-5 text-primary" />
+              <Network className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h1 className="font-bold text-base tracking-tight text-foreground leading-none">
-                ASTRO ORBITER
+                APP
               </h1>
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono mt-0.5">
                 Operations Center
