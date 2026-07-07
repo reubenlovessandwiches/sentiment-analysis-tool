@@ -1,8 +1,11 @@
 import { Router, type IRouter } from "express";
-import { db, archetypeScoresTable, redditUsersTable, analysesTable } from "@workspace/db";
-import { eq, desc, gt, sql, count, and } from "drizzle-orm";
-import { GetArchetypeUsersParams, GetArchetypeUsersQueryParams } from "@workspace/api-zod";
-import { ARCHETYPES } from "../lib/archetypes";
+import { db, archetypeScoresTable, redditUsersTable, analysesTable, jobsTable } from "@workspace/db";
+import { eq, desc, gt, sql, count, and, inArray } from "drizzle-orm";
+import { GetArchetypeUsersParams, GetArchetypeUsersQueryParams, DeriveArchetypesBody } from "@workspace/api-zod";
+import { ARCHETYPES, applyArchetypes } from "../lib/archetypes";
+import { deriveArchetypes } from "../lib/derive-archetypes";
+import { setSetting, SETTING_ARCHETYPES } from "../lib/settings";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -102,5 +105,96 @@ router.get("/archetypes/:key/users", async (req, res): Promise<void> => {
     })),
   );
 });
+
+router.post("/archetypes/derive", async (req, res): Promise<void> => {
+  if (req.session.role !== "admin") {
+    res.status(403).json({ error: "Only an admin can regenerate the archetype taxonomy." });
+    return;
+  }
+
+  const parsed = DeriveArchetypesBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const source = parsed.data.source.trim();
+  if (!source) {
+    res.status(400).json({ error: "A community source is required." });
+    return;
+  }
+  const description = parsed.data.description?.trim() ?? "";
+
+  const [running] = await db
+    .select({ id: jobsTable.id })
+    .from(jobsTable)
+    .where(and(eq(jobsTable.jobType, "derive_archetypes"), inArray(jobsTable.status, ["pending", "running"])))
+    .limit(1);
+  if (running) {
+    res.status(409).json({ error: "An archetype regeneration is already running. Wait for it to finish." });
+    return;
+  }
+
+  const [job] = await db
+    .insert(jobsTable)
+    .values({
+      jobType: "derive_archetypes",
+      status: "pending",
+      targetUsername: source,
+      total: 0,
+      progress: 0,
+      createdBy: req.session.user ?? null,
+    })
+    .returning();
+
+  runDeriveArchetypesJob(job.id, source, description).catch(() => {});
+
+  res.status(202).json({
+    id: job.id,
+    jobType: job.jobType,
+    status: job.status,
+    subredditId: job.subredditId ?? null,
+    targetUsername: job.targetUsername ?? null,
+    postUrl: job.postUrl ?? null,
+    progress: job.progress ?? null,
+    total: job.total ?? null,
+    errorMessage: job.errorMessage ?? null,
+    createdAt: job.createdAt.toISOString(),
+    completedAt: job.completedAt?.toISOString() ?? null,
+  });
+});
+
+/**
+ * Background runner: derive a community-specific taxonomy, apply it in-process
+ * (so it takes effect immediately) and persist it so it survives restarts.
+ */
+async function runDeriveArchetypesJob(jobId: number, source: string, description: string): Promise<void> {
+  await db.update(jobsTable).set({ status: "running" }).where(eq(jobsTable.id, jobId));
+  try {
+    const archetypes = await deriveArchetypes(source, description);
+    applyArchetypes(archetypes);
+    await setSetting(SETTING_ARCHETYPES, JSON.stringify(archetypes));
+    await db
+      .update(jobsTable)
+      .set({
+        status: "completed",
+        total: archetypes.length,
+        progress: archetypes.length,
+        completedAt: new Date(),
+      })
+      .where(eq(jobsTable.id, jobId));
+    logger.info({ jobId, count: archetypes.length, source }, "Derived archetype taxonomy");
+  } catch (err) {
+    await db
+      .update(jobsTable)
+      .set({
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        completedAt: new Date(),
+      })
+      .where(eq(jobsTable.id, jobId));
+    logger.error({ err, jobId, source }, "Failed to derive archetype taxonomy");
+  }
+}
 
 export default router;
