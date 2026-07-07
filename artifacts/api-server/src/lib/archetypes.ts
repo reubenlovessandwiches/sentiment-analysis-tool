@@ -1,4 +1,17 @@
-export const ARCHETYPES = [
+import { getSetting, SETTING_ARCHETYPES } from "./settings";
+
+export interface Archetype {
+  key: string;
+  name: string;
+  description: string;
+  indicators: string[];
+  relatedArchetypes: string[];
+}
+
+// Default taxonomy shipped with the repo. It is used as-is until a community-
+// specific taxonomy is derived (via the Admin page or the derive-archetypes
+// script), which is stored in the DB and loaded over this default at startup.
+export const ARCHETYPES: Archetype[] = [
   {
     key: "anti_establishment",
     name: "Anti-Establishment",
@@ -97,10 +110,45 @@ export const ARCHETYPES = [
     indicators: ["no clear dominant themes"],
     relatedArchetypes: [],
   },
-] as const;
+];
 
-export type ArchetypeKey = (typeof ARCHETYPES)[number]["key"];
+export type ArchetypeKey = string;
 
 export function getArchetype(key: string) {
   return ARCHETYPES.find((a) => a.key === key);
+}
+
+/**
+ * Replace the active taxonomy in place so every module that imported the
+ * ARCHETYPES reference observes the update without needing to re-import.
+ */
+export function applyArchetypes(list: Archetype[]): void {
+  ARCHETYPES.splice(0, ARCHETYPES.length, ...list);
+}
+
+/**
+ * Load a previously derived taxonomy from the DB if one has been saved,
+ * otherwise keep the default shipped above. Called once at server startup.
+ */
+function isArchetype(x: unknown): x is Archetype {
+  if (typeof x !== "object" || x === null) return false;
+  const r = x as Record<string, unknown>;
+  return (
+    typeof r.key === "string" &&
+    typeof r.name === "string" &&
+    typeof r.description === "string" &&
+    Array.isArray(r.indicators) &&
+    r.indicators.every((i) => typeof i === "string") &&
+    Array.isArray(r.relatedArchetypes) &&
+    r.relatedArchetypes.every((i) => typeof i === "string")
+  );
+}
+
+export async function loadArchetypesFromDb(): Promise<void> {
+  const raw = await getSetting(SETTING_ARCHETYPES);
+  if (!raw) return;
+  const parsed: unknown = JSON.parse(raw);
+  if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isArchetype)) {
+    applyArchetypes(parsed);
+  }
 }
